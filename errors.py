@@ -1,9 +1,17 @@
 """Функции для работы с ошибками программного продукта."""
 
-from typing import Dict, List
+from typing import List, TypedDict
 
 
-Error = Dict[str, object]
+class Error(TypedDict):
+    """Структура записи об ошибке программного продукта."""
+
+    id: int
+    title: str
+    description: str
+    severity: str
+    priority: str
+    status: str
 
 
 def determine_priority(severity: str) -> str:
@@ -37,7 +45,7 @@ def add_error(
     }:
         raise ValueError("Укажите корректную серьезность ошибки")
 
-    error = {
+    error: Error = {
         "id": max((int(item["id"]) for item in errors), default=0) + 1,
         "title": title.strip(),
         "description": description.strip(),
