@@ -8,6 +8,7 @@ from errors import (
     sort_errors,
     update_error_status,
 )
+from entities import add_developer, add_status, add_user
 
 
 def test_add_error_and_priority():
@@ -50,3 +51,17 @@ def test_invalid_error_is_rejected():
         add_error([], "", "Описание", "критическая")
 
     assert determine_priority("неизвестная") == "Низкий"
+
+
+def test_project_entities():
+    users = []
+    developers = []
+    statuses = []
+
+    user = add_user(users, "Иван", "ivan@example.com")
+    developer = add_developer(developers, "Анна", "Backend")
+    status = add_status(statuses, "В работе")
+
+    assert user["id"] == 1
+    assert developer["specialization"] == "Backend"
+    assert status["name"] == "В работе"

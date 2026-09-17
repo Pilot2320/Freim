@@ -12,6 +12,8 @@ class Error(TypedDict):
     severity: str
     priority: str
     status: str
+    user_id: int
+    developer_id: int
 
 
 def determine_priority(severity: str) -> str:
@@ -30,6 +32,8 @@ def add_error(
     description: str,
     severity: str,
     status: str = "Новая",
+    user_id: int = 1,
+    developer_id: int = 1,
 ) -> Error:
     """Добавить ошибку в список и вернуть созданную запись."""
     if not title.strip():
@@ -52,6 +56,8 @@ def add_error(
         "severity": normalized_severity,
         "priority": determine_priority(normalized_severity),
         "status": status.strip() or "Новая",
+        "user_id": user_id,
+        "developer_id": developer_id,
     }
     errors.append(error)
     return error
