@@ -1,27 +1,30 @@
-"""Консольный интерфейс сервиса учета ошибок."""
+"""Консольный интерфейс объектного сервиса учета ошибок."""
 
 from datetime import date
 from pathlib import Path
 from typing import List
 
 from errors import (
-    Error,
+    DEFAULT_SEVERITIES,
     add_error,
     delete_error,
     determine_priority,
-    find_errors,
     filter_errors_by_severity,
     filter_errors_by_status,
+    find_errors,
     sort_errors,
     update_error_status,
 )
-from entities import Developer, Status, User
+from models import Developer, Error, Status, User
 from storage import (
     load_developers,
     load_errors,
     load_statuses,
     load_users,
+    save_developers,
     save_errors,
+    save_statuses,
+    save_users,
 )
 from utils import input_int
 
@@ -48,49 +51,24 @@ def format_error_report(
     )
 
 
-def show_errors(
-    errors: List[Error],
-    users: List[User],
-    developers: List[Developer],
-) -> None:
-    """Вывести список ошибок, отсортированный по приоритету."""
+def show_errors(errors: List[Error]) -> None:
+    """Вывести список объектов ошибок."""
     if not errors:
         print("Ошибки не найдены.")
         return
     for error in sort_errors(errors):
-        user = next(
-            (item for item in users if item["id"] == error["user_id"]),
-            {"name": "Неизвестный пользователь"},
-        )
-        developer = next(
-            (
-                item
-                for item in developers
-                if item["id"] == error["developer_id"]
-            ),
-            {"name": "Разработчик не назначен"},
-        )
+        print(error)
         print(
-            f"{error['id']}. {error['title']} | "
-            f"{error['severity']} | {error['priority']} | "
-            f"{error['status']}"
-        )
-        print(
-            f"   {error['description']} | "
-            f"Пользователь: {user['name']} | "
-            f"Разработчик: {developer['name']}"
+            f"   {error.description} | Пользователь: {error.user} | "
+            f"Разработчик: {error.developer}"
         )
 
 
-def _data_path() -> Path:
-    """Вернуть путь к файлу с ошибками."""
-    return Path(__file__).parent / "data" / "errors.json"
-
-
-def _reference_paths() -> tuple[Path, Path, Path]:
-    """Вернуть пути к справочникам пользователей, разработчиков и статусов."""
+def _data_paths() -> tuple[Path, Path, Path, Path]:
+    """Вернуть пути к файлам объектных данных."""
     data_dir = Path(__file__).parent / "data"
     return (
+        data_dir / "errors.json",
         data_dir / "users.json",
         data_dir / "developers.json",
         data_dir / "statuses.json",
@@ -98,7 +76,7 @@ def _reference_paths() -> tuple[Path, Path, Path]:
 
 
 def _print_menu() -> None:
-    """Вывести меню приложения."""
+    """Вывести главное меню приложения."""
     print(
         "\n=== Сервис учета ошибок программного продукта ===\n"
         "1. Показать все ошибки\n"
@@ -112,80 +90,108 @@ def _print_menu() -> None:
     )
 
 
+def _select_status(statuses: List[Status]) -> Status:
+    """Выбрать объект статуса по ID."""
+    print("Доступные статусы:")
+    for status in statuses:
+        print(f"{status.id}. {status.name}")
+    status_id = input_int("ID статуса: ")
+    selected = next((item for item in statuses if item.id == status_id), None)
+    if selected is None:
+        raise ValueError("Статус не найден")
+    return selected
+
+
+def _select_severity() -> str:
+    """Выбрать серьезность по числовому ID."""
+    print("Уровни серьезности:")
+    for severity_id, severity in DEFAULT_SEVERITIES.items():
+        print(f"{severity_id}. {severity}")
+    selected_severity: str | None = DEFAULT_SEVERITIES.get(
+        input_int("ID серьезности: ")
+    )
+    if selected_severity is None:
+        raise ValueError("Уровень серьезности не найден")
+    return selected_severity
+
+
 def _add_error_from_input(
     errors: List[Error],
     users: List[User],
     developers: List[Developer],
     statuses: List[Status],
 ) -> None:
-    """Получить данные ошибки из консоли и добавить запись."""
+    """Получить данные и создать связанную ошибку."""
     title = input("Заголовок: ")
     description = input("Описание: ")
-    severity = input("Серьезность (критическая/значительная/незначительная): ")
+    severity = _select_severity()
     user_id = input_int("ID пользователя: ")
     developer_id = input_int("ID разработчика: ")
-    status = input("Статус: ") or statuses[0]["name"]
-    if not any(item["id"] == user_id for item in users):
-        raise ValueError("Пользователь не найден")
-    if not any(item["id"] == developer_id for item in developers):
-        raise ValueError("Разработчик не найден")
-    if not any(item["name"] == status for item in statuses):
-        raise ValueError("Статус не найден")
-    error = add_error(
-        errors,
-        title,
-        description,
-        severity,
-        status,
-        user_id,
-        developer_id,
+    user = next((item for item in users if item.id == user_id), None)
+    developer = next(
+        (item for item in developers if item.id == developer_id), None
     )
-    print(f"Ошибка зарегистрирована с ID {error['id']}.")
+    if user is None:
+        raise ValueError("Пользователь не найден")
+    if developer is None:
+        raise ValueError("Разработчик не найден")
+    status = _select_status(statuses)
+    error = add_error(
+        errors, title, description, severity, status, user, developer
+    )
+    print(f"Ошибка зарегистрирована с ID {error.id}.")
+
+
+def _save_all(
+    paths: tuple[Path, Path, Path, Path],
+    errors: List[Error],
+    users: List[User],
+    developers: List[Developer],
+    statuses: List[Status],
+) -> None:
+    """Сохранить все коллекции объектной модели."""
+    errors_file, users_file, developers_file, statuses_file = paths
+    save_errors(errors_file, errors)
+    save_users(users_file, users)
+    save_developers(developers_file, developers)
+    save_statuses(statuses_file, statuses)
 
 
 def main() -> None:
-    """Запустить цикл меню и сохранить изменения перед выходом."""
-    errors_file = _data_path()
-    users_file, developers_file, statuses_file = _reference_paths()
-    errors = load_errors(errors_file)
+    """Загрузить объекты, запустить меню и сохранить изменения."""
+    paths = _data_paths()
+    errors_file, users_file, developers_file, statuses_file = paths
     users = load_users(users_file)
     developers = load_developers(developers_file)
     statuses = load_statuses(statuses_file)
+    errors = load_errors(errors_file, users, developers, statuses)
 
     while True:
         _print_menu()
         choice = input_int("\nВыберите действие: ")
         try:
             if choice == 0:
-                save_errors(errors_file, errors)
+                _save_all(paths, errors, users, developers, statuses)
                 print("Данные сохранены. До свидания!")
                 return
             if choice == 1:
-                show_errors(errors, users, developers)
+                show_errors(errors)
             elif choice == 2:
-                show_errors(
-                    find_errors(errors, input("Поисковый запрос: ")),
-                    users,
-                    developers,
-                )
+                show_errors(find_errors(errors, input("Поисковый запрос: ")))
             elif choice == 3:
                 _add_error_from_input(errors, users, developers, statuses)
                 save_errors(errors_file, errors)
             elif choice == 4:
-                show_errors(
-                    filter_errors_by_status(errors, input("Статус: ")),
-                    users,
-                    developers,
-                )
+                show_errors(errors)
+                status = _select_status(statuses)
+                show_errors(filter_errors_by_status(errors, status))
             elif choice == 5:
                 show_errors(
-                    filter_errors_by_severity(errors, input("Серьезность: ")),
-                    users,
-                    developers,
+                    filter_errors_by_severity(errors, _select_severity())
                 )
             elif choice == 6:
                 error_id = input_int("ID ошибки: ")
-                status = input("Новый статус: ")
+                status = _select_status(statuses)
                 if update_error_status(errors, error_id, status):
                     save_errors(errors_file, errors)
                     print("Статус изменен.")

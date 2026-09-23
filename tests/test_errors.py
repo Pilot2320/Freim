@@ -8,60 +8,103 @@ from errors import (
     sort_errors,
     update_error_status,
 )
-from entities import add_developer, add_status, add_user
+from models import Developer, Status, User
+
+
+def make_context():
+    """Создать связанные объекты для тестов ошибок."""
+    return (
+        User(1, "Иван", "ivan@example.com"),
+        Developer(1, "Анна", "Backend"),
+        Status(1, "Новая"),
+    )
 
 
 def test_add_error_and_priority():
     errors = []
+    user, developer, status = make_context()
     error = add_error(
-        errors, "Ошибка входа", "Не открывается форма", "критическая"
+        errors,
+        "Ошибка входа",
+        "Не открывается форма",
+        "критическая",
+        status,
+        user,
+        developer,
     )
 
-    assert error["id"] == 1
-    assert error["priority"] == "Высокий"
+    assert error.id == 1
+    assert error.priority == "Высокий"
+    assert error.user is user
+    assert error.developer is developer
 
 
 def test_find_error():
     errors = []
-    add_error(errors, "Ошибка входа", "Не открывается форма", "значительная")
+    user, developer, status = make_context()
+    add_error(
+        errors,
+        "Ошибка входа",
+        "Не открывается форма",
+        "значительная",
+        status,
+        user,
+        developer,
+    )
 
-    assert find_errors(errors, "форма")[0]["title"] == "Ошибка входа"
+    assert find_errors(errors, "форма")[0].title == "Ошибка входа"
 
 
 def test_update_and_delete_error():
     errors = []
-    add_error(errors, "Ошибка входа", "Описание", "незначительная")
+    user, developer, status = make_context()
+    error = add_error(
+        errors,
+        "Ошибка входа",
+        "Описание",
+        "незначительная",
+        status,
+        user,
+        developer,
+    )
+    fixed_status = Status(2, "Исправлена")
 
-    assert update_error_status(errors, 1, "Исправлена")
-    assert errors[0]["status"] == "Исправлена"
-    assert delete_error(errors, 1)
+    assert update_error_status(errors, error.id, fixed_status)
+    assert error.status is fixed_status
+    assert delete_error(errors, error.id)
     assert errors == []
 
 
 def test_sort_errors_by_priority():
     errors = []
-    add_error(errors, "Низкий", "Описание", "незначительная")
-    add_error(errors, "Высокий", "Описание", "критическая")
+    user, developer, status = make_context()
+    add_error(
+        errors,
+        "Низкий",
+        "Описание",
+        "незначительная",
+        status,
+        user,
+        developer,
+    )
+    add_error(
+        errors,
+        "Высокий",
+        "Описание",
+        "критическая",
+        status,
+        user,
+        developer,
+    )
 
-    assert sort_errors(errors)[0]["title"] == "Высокий"
+    assert sort_errors(errors)[0].title == "Высокий"
 
 
 def test_invalid_error_is_rejected():
+    user, developer, status = make_context()
     with pytest.raises(ValueError):
-        add_error([], "", "Описание", "критическая")
+        add_error(
+            [], "", "Описание", "критическая", status, user, developer
+        )
 
     assert determine_priority("неизвестная") == "Низкий"
-
-
-def test_project_entities():
-    users = []
-    developers = []
-    statuses = []
-
-    user = add_user(users, "Иван", "ivan@example.com")
-    developer = add_developer(developers, "Анна", "Backend")
-    status = add_status(statuses, "В работе")
-
-    assert user["id"] == 1
-    assert developer["specialization"] == "Backend"
-    assert status["name"] == "В работе"

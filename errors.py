@@ -1,19 +1,15 @@
-"""Функции для работы с ошибками программного продукта."""
+"""Функции обработки коллекции объектов Error."""
 
-from typing import List, TypedDict
+from typing import List, Optional
+
+from models import Developer, Error, Status, User
 
 
-class Error(TypedDict):
-    """Структура записи об ошибке программного продукта."""
-
-    id: int
-    title: str
-    description: str
-    severity: str
-    priority: str
-    status: str
-    user_id: int
-    developer_id: int
+DEFAULT_SEVERITIES = {
+    1: "критическая",
+    2: "значительная",
+    3: "незначительная",
+}
 
 
 def determine_priority(severity: str) -> str:
@@ -31,52 +27,50 @@ def add_error(
     title: str,
     description: str,
     severity: str,
-    status: str = "Новая",
-    user_id: int = 1,
-    developer_id: int = 1,
+    status: Status,
+    user: User,
+    developer: Developer,
 ) -> Error:
-    """Добавить ошибку в список и вернуть созданную запись."""
+    """Создать объект ошибки и добавить его в коллекцию."""
     if not title.strip():
         raise ValueError("Заголовок ошибки не может быть пустым")
     if not description.strip():
         raise ValueError("Описание ошибки не может быть пустым")
 
     normalized_severity = severity.strip().lower()
-    if normalized_severity not in {
-        "критическая",
-        "значительная",
-        "незначительная",
-    }:
+    if normalized_severity not in DEFAULT_SEVERITIES.values():
         raise ValueError("Укажите корректную серьезность ошибки")
 
-    error: Error = {
-        "id": max((int(item["id"]) for item in errors), default=0) + 1,
-        "title": title.strip(),
-        "description": description.strip(),
-        "severity": normalized_severity,
-        "priority": determine_priority(normalized_severity),
-        "status": status.strip() or "Новая",
-        "user_id": user_id,
-        "developer_id": developer_id,
-    }
+    error = Error(
+        max((item.id for item in errors), default=0) + 1,
+        title.strip(),
+        description.strip(),
+        normalized_severity,
+        determine_priority(normalized_severity),
+        status,
+        user,
+        developer,
+    )
     errors.append(error)
     return error
 
 
 def find_errors(errors: List[Error], query: str) -> List[Error]:
-    """Найти ошибки по подстроке в заголовке или описании."""
+    """Найти объекты ошибок по заголовку или описанию."""
     normalized_query = query.strip().lower()
     return [
         error
         for error in errors
-        if normalized_query in str(error["title"]).lower()
-        or normalized_query in str(error["description"]).lower()
+        if normalized_query in error.title.lower()
+        or normalized_query in error.description.lower()
     ]
 
 
-def filter_errors_by_status(errors: List[Error], status: str) -> List[Error]:
-    """Отобрать ошибки с указанным статусом."""
-    return [error for error in errors if error["status"] == status]
+def filter_errors_by_status(
+    errors: List[Error], status: Status
+) -> List[Error]:
+    """Отобрать ошибки с указанным объектом статуса."""
+    return [error for error in errors if error.status.id == status.id]
 
 
 def filter_errors_by_severity(
@@ -84,9 +78,7 @@ def filter_errors_by_severity(
 ) -> List[Error]:
     """Отобрать ошибки указанной серьезности."""
     normalized_severity = severity.strip().lower()
-    return [
-        error for error in errors if error["severity"] == normalized_severity
-    ]
+    return [error for error in errors if error.severity == normalized_severity]
 
 
 def sort_errors(errors: List[Error]) -> List[Error]:
@@ -94,22 +86,17 @@ def sort_errors(errors: List[Error]) -> List[Error]:
     priority_order = {"Высокий": 0, "Средний": 1, "Низкий": 2}
     return sorted(
         errors,
-        key=lambda error: (
-            priority_order.get(str(error["priority"]), 3),
-            error["id"],
-        ),
+        key=lambda error: (priority_order.get(error.priority, 3), error.id),
     )
 
 
 def update_error_status(
-    errors: List[Error], error_id: int, status: str
+    errors: List[Error], error_id: int, status: Status
 ) -> bool:
     """Изменить статус ошибки по идентификатору."""
-    if not status.strip():
-        raise ValueError("Статус не может быть пустым")
     for error in errors:
-        if int(error["id"]) == error_id:
-            error["status"] = status.strip()
+        if error.id == error_id:
+            error.status = status
             return True
     return False
 
@@ -117,7 +104,12 @@ def update_error_status(
 def delete_error(errors: List[Error], error_id: int) -> bool:
     """Удалить ошибку по идентификатору."""
     for index, error in enumerate(errors):
-        if int(error["id"]) == error_id:
+        if error.id == error_id:
             del errors[index]
             return True
     return False
+
+
+def find_by_id(errors: List[Error], error_id: int) -> Optional[Error]:
+    """Найти ошибку по идентификатору."""
+    return next((error for error in errors if error.id == error_id), None)
