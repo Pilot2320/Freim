@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Freim — главная{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Всего ошибок</h5>
+        <p class="display-6 fw-bold mb-0">{{ total_errors }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Активные</h5>
+        <p class="display-6 fw-bold mb-0">{{ open_errors }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Высокий приоритет</h5>
+        <p class="display-6 fw-bold mb-0">{{ high_priority }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 card shadow-sm border-0">
+  <div class="card-body">
+    <h1 class="h3 mb-3">Сервис учета ошибок</h1>
+    <p class="lead">
+      Здесь отображается веб-интерфейс проекта, созданный на базе предметной области
+      из ПР3. Ошибки связаны с пользователями, разработчиками и статусами.
+    </p>
+    <a class="btn btn-primary" href="{% url 'error_list' %}">Посмотреть список ошибок</a>
+  </div>
+</div>
+
+<div class="mt-4 card shadow-sm border-0">
+  <div class="card-header bg-white">
+    <h2 class="h5 mb-0">Последние ошибки</h2>
+  </div>
+  <div class="list-group list-group-flush">
+    {% for error in errors|slice:':5' %}
+      <a class="list-group-item list-group-item-action" href="{% url 'error_detail' error.id %}">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ error.title }}</strong>
+            <div class="text-muted small">{{ error.severity }} · {{ error.status }}</div>
+          </div>
+          <span class="badge rounded-pill text-bg-{% if error.priority == 'Высокий' %}danger{% elif error.priority == 'Средний' %}warning{% else %}success{% endif %}">
+            {{ error.priority }}
+          </span>
+        </div>
+      </a>
+    {% empty %}
+      <div class="list-group-item text-muted">Пока нет зарегистрированных ошибок.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

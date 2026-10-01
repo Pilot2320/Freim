@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ error.title }} — Freim{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h1 class="h3 mb-0">{{ error.title }}</h1>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'error_list' %}">К списку</a>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <p><strong>Серьезность:</strong> {{ error.severity }}</p>
+        <p><strong>Приоритет:</strong> {{ error.priority }}</p>
+        <p><strong>Статус:</strong> {{ error.status }}</p>
+      </div>
+      <div class="col-md-6">
+        <p><strong>Пользователь:</strong> {{ error.user }}</p>
+        <p><strong>Разработчик:</strong> {{ error.developer }}</p>
+        <p><strong>ID:</strong> {{ error.id }}</p>
+      </div>
+    </div>
+
+    <hr />
+
+    <h2 class="h5">Описание</h2>
+    <p class="mb-0">{{ error.description }}</p>
+  </div>
+</div>
+{% endblock %}

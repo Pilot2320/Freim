@@ -1,0 +1,16 @@
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.table a {
+    text-decoration: none;
+}
+
+.badge {
+    min-width: 6.5rem;
+    text-align: center;
+}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Ошибки — Freim{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h1 class="h3 mb-0">Список ошибок</h1>
+    <a class="btn btn-primary btn-sm" href="{% url 'home' %}">На главную</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Заголовок</th>
+          <th>Серьезность</th>
+          <th>Приоритет</th>
+          <th>Статус</th>
+          <th>Разработчик</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for error in errors %}
+          <tr>
+            <td>{{ error.id }}</td>
+            <td><a href="{% url 'error_detail' error.id %}">{{ error.title }}</a></td>
+            <td>{{ error.severity }}</td>
+            <td>
+              <span class="badge text-bg-{% if error.priority == 'Высокий' %}danger{% elif error.priority == 'Средний' %}warning{% else %}success{% endif %}">
+                {{ error.priority }}
+              </span>
+            </td>
+            <td>{{ error.status }}</td>
+            <td>{{ error.developer }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Ошибки не найдены.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
