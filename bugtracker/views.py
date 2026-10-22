@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from django.http import Http404
 from django.shortcuts import render
 
 from errors import sort_errors
@@ -19,12 +18,20 @@ def _load_error_list():
 
 
 def error_list(request):
-    return render(request, "errors/error_list.html", {"errors": _load_error_list()})
+    errors = _load_error_list()
+    return render(
+        request,
+        "errors/error_list.html",
+        {"errors": errors},
+    )
 
 
 def error_detail(request, error_id):
     errors = _load_error_list()
     error = next((item for item in errors if item.id == error_id), None)
-    if error is None:
-        raise Http404("Ошибка не найдена.")
-    return render(request, "errors/error_detail.html", {"error": error})
+    return render(
+        request,
+        "errors/error_detail.html",
+        {"error": error},
+        status=404 if error is None else 200,
+    )

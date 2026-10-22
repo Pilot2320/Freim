@@ -1,8 +1,12 @@
 from django.urls import path
 
-from .views import error_detail, error_list
+from . import views
+
+app_name = "bugtracker"
 
 urlpatterns = [
-    path("", error_list, name="error_list"),
-    path("<int:error_id>/", error_detail, name="error_detail"),
+    path("", views.error_list, name="error_list"),
+    path("", views.error_list, name="list"),
+    path("<int:error_id>/", views.error_detail, name="error_detail"),
+    path("<int:error_id>/", views.error_detail, name="detail"),
 ]

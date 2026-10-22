@@ -1,31 +1,43 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}{{ error.title }} — Freim{% endblock %}
+{% block title %}
+  {% if error %}
+    {{ error.title }} — Freim
+  {% else %}
+    Ошибка не найдена — Freim
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center">
-    <h1 class="h3 mb-0">{{ error.title }}</h1>
-    <a class="btn btn-outline-primary btn-sm" href="{% url 'error_list' %}">К списку</a>
-  </div>
-  <div class="card-body">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <p><strong>Серьезность:</strong> {{ error.severity }}</p>
-        <p><strong>Приоритет:</strong> {{ error.priority }}</p>
-        <p><strong>Статус:</strong> {{ error.status }}</p>
-      </div>
-      <div class="col-md-6">
-        <p><strong>Пользователь:</strong> {{ error.user }}</p>
-        <p><strong>Разработчик:</strong> {{ error.developer }}</p>
-        <p><strong>ID:</strong> {{ error.id }}</p>
-      </div>
+{% if error %}
+  <div class="card error-card shadow-sm border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h1 class="h4 mb-0">{{ error.title|default:"Без названия" }}</h1>
+      {% include "errors/includes/error_status.html" %}
     </div>
-
-    <hr />
-
-    <h2 class="h5">Описание</h2>
-    <p class="mb-0">{{ error.description }}</p>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p><strong>ID ошибки:</strong> {{ error.id }}</p>
+          <p><strong>Серьезность:</strong> {{ error.severity }}</p>
+          <p><strong>Приоритет:</strong> {{ error.priority }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Пользователь:</strong> {{ error.user }}</p>
+          <p><strong>Разработчик:</strong> {{ error.developer }}</p>
+        </div>
+      </div>
+      <hr />
+      <h2 class="h5">Описание</h2>
+      <p class="mb-0">{{ error.description }}</p>
+    </div>
   </div>
-</div>
+{% else %}
+  <h1 class="text-danger">Ошибка не найдена</h1>
+  <p>Ошибка с указанным идентификатором отсутствует.</p>
+{% endif %}
+
+<a href="{% url 'bugtracker:error_list' %}" class="btn btn-outline-secondary mt-3">
+  ← к списку ошибок
+</a>
 {% endblock %}
