@@ -1,3 +1,5 @@
+"""Тесты представлений веб-интерфейса Django."""
+
 import os
 
 import django
@@ -41,3 +43,25 @@ def test_error_detail_not_found(client):
     response = client.get(url)
     assert response.status_code == 404
     assert "Ошибка не найдена" in response.content.decode("utf-8")
+
+
+def test_error_search_view(client):
+    url = reverse("bugtracker:search")
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "Поиск ошибок" in response.content.decode("utf-8")
+
+    # Filtered
+    response_filtered = client.get(url, {"severity": "критическая"})
+    assert response_filtered.status_code == 200
+    content = response_filtered.content.decode("utf-8")
+    assert "критическая" in content
+
+
+def test_statistics_view(client):
+    url = reverse("bugtracker:statistics")
+    response = client.get(url)
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "Статистика по базе данных" in content
+    assert "GROUP BY" in content

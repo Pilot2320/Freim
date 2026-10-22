@@ -3,5 +3,15 @@
     "id": 1,
     "name": "Иван Петров",
     "email": "ivan.petrov@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Елена Сидорова",
+    "email": "elena.sidorova@example.com"
+  },
+  {
+    "id": 3,
+    "name": "Сергей Кузнецов",
+    "email": "sergey.kuznetsov@example.com"
   }
 ]

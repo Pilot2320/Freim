@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Статистика — Freim
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Статистика по базе данных (SQL)</h1>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'bugtracker:error_list' %}">← к списку ошибок</a>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white">
+        <h2 class="h5 mb-0">Распределение ошибок по статусам (GROUP BY)</h2>
+      </div>
+      <div class="card-body">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Статус</th>
+              <th class="text-end">Количество</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in status_stats %}
+              <tr>
+                <td>{{ item.status_name }}</td>
+                <td class="text-end fw-bold">{{ item.errors_count }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="2" class="text-muted text-center">Данные отсутствуют.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white">
+        <h2 class="h5 mb-0">Ошибки по разработчикам (LEFT JOIN + GROUP BY)</h2>
+      </div>
+      <div class="card-body">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Разработчик</th>
+              <th>Специализация</th>
+              <th class="text-end">Назначено</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in dev_stats %}
+              <tr>
+                <td>{{ item.developer_name }}</td>
+                <td class="text-muted">{{ item.specialization }}</td>
+                <td class="text-end fw-bold">{{ item.errors_count }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-muted text-center">Данные отсутствуют.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white">
+    <h2 class="h5 mb-0">Разработчики с высокой нагрузкой (HAVING > 1)</h2>
+  </div>
+  <div class="card-body">
+    <table class="table table-striped mb-0">
+      <thead>
+        <tr>
+          <th>Разработчик</th>
+          <th class="text-end">Количество назначенных задач</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dev in busy_devs %}
+          <tr>
+            <td><strong>{{ dev.developer_name }}</strong></td>
+            <td class="text-end"><span class="badge bg-danger">{{ dev.errors_count }} задач(и)</span></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2" class="text-muted text-center">Разработчиков с более чем 1 задачей не найдено.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

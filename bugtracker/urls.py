@@ -9,4 +9,6 @@ urlpatterns = [
     path("", views.error_list, name="list"),
     path("<int:error_id>/", views.error_detail, name="error_detail"),
     path("<int:error_id>/", views.error_detail, name="detail"),
+    path("search/", views.error_search, name="search"),
+    path("statistics/", views.statistics, name="statistics"),
 ]
