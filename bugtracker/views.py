@@ -1,118 +1,90 @@
-"""Представления для работы с ошибками через SQLite."""
+"""Представления для работы с ошибками через Django ORM (ПР9)."""
 
-import sqlite3
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, render
 
-from django.shortcuts import render
-
-from db.database import get_connection
+from .models import Developer, Error, Status, User
 
 
 def error_list(request):
-    """Отобразить список всех ошибок из базы данных SQLite."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    try:
-        errors = conn.execute(
-            """
-            SELECT
-                errors.id,
-                errors.title,
-                errors.severity,
-                errors.priority,
-                statuses.name AS status,
-                statuses.name AS status_name,
-                developers.name AS developer,
-                developers.name AS developer_name,
-                users.name AS user,
-                users.name AS user_name
-            FROM errors
-            JOIN statuses ON errors.status_id = statuses.id
-            JOIN developers ON errors.developer_id = developers.id
-            JOIN users ON errors.user_id = users.id
-            ORDER BY errors.id
-            """
-        ).fetchall()
-    finally:
-        conn.close()
+    """Список ошибок с фильтрацией, сортировкой и пагинацией (ORM)."""
+    severity = request.GET.get("severity", "").strip()
+    priority = request.GET.get("priority", "").strip()
+    status_id = request.GET.get("status", "").strip()
+    dev_id = request.GET.get("developer", "").strip()
+    sort = request.GET.get("sort", "id").strip()
 
-    return render(
-        request,
-        "errors/error_list.html",
-        {"errors": errors},
-    )
+    errors_qs = Error.objects.select_related("status", "developer", "user")
+
+    if severity:
+        errors_qs = errors_qs.filter(severity=severity)
+    if priority:
+        errors_qs = errors_qs.filter(priority=priority)
+    if status_id.isdigit():
+        errors_qs = errors_qs.filter(status_id=int(status_id))
+    if dev_id.isdigit():
+        errors_qs = errors_qs.filter(developer_id=int(dev_id))
+
+    sort_fields = {
+        "id": "id",
+        "-id": "-id",
+        "title": "title",
+        "severity": "severity",
+        "priority": "priority",
+        "status": "status__name",
+        "developer": "developer__name",
+    }
+    sort_field = sort_fields.get(sort, "id")
+    errors_qs = errors_qs.order_by(sort_field)
+
+    paginator = Paginator(errors_qs, 5)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    context = {
+        "errors": page_obj,
+        "page_obj": page_obj,
+        "total_count": errors_qs.count(),
+        "statuses": Status.objects.order_by("id"),
+        "developers": Developer.objects.order_by("name"),
+        "users": User.objects.order_by("name"),
+        "selected_severity": severity,
+        "selected_priority": priority,
+        "selected_status": status_id,
+        "selected_dev": dev_id,
+        "selected_sort": sort,
+    }
+    return render(request, "errors/error_list.html", context)
 
 
 def error_detail(request, error_id: int):
-    """Отобразить карточку конкретной ошибки из SQLite."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    try:
-        error = conn.execute(
-            """
-            SELECT
-                errors.id,
-                errors.title,
-                errors.description,
-                errors.severity,
-                errors.priority,
-                statuses.name AS status,
-                statuses.name AS status_name,
-                developers.name AS developer,
-                developers.name AS developer_name,
-                users.name AS user,
-                users.name AS user_name
-            FROM errors
-            JOIN statuses ON errors.status_id = statuses.id
-            JOIN developers ON errors.developer_id = developers.id
-            JOIN users ON errors.user_id = users.id
-            WHERE errors.id = ?
-            """,
-            (error_id,),
-        ).fetchone()
-    finally:
-        conn.close()
-
+    """Карточка отдельной ошибки, полученная через get_object_or_404."""
+    error = get_object_or_404(
+        Error.objects.select_related("status", "developer", "user"),
+        pk=error_id,
+    )
     return render(
         request,
         "errors/error_detail.html",
         {"error": error},
-        status=404 if error is None else 200,
     )
 
 
 def error_search(request):
-    """Поиск ошибок по уровню серьезности через параметризованный SQL."""
+    """Поиск ошибок по уровню серьезности или запросу через Django ORM."""
     severity = request.GET.get("severity", "").strip()
+    query = request.GET.get("q", "").strip()
+
     errors = []
-    if severity:
-        conn = get_connection()
-        conn.row_factory = sqlite3.Row
-        try:
-            errors = conn.execute(
-                """
-                SELECT
-                    errors.id,
-                    errors.title,
-                    errors.description,
-                    errors.severity,
-                    errors.priority,
-                    statuses.name AS status,
-                    statuses.name AS status_name,
-                    developers.name AS developer,
-                    developers.name AS developer_name,
-                    users.name AS user,
-                    users.name AS user_name
-                FROM errors
-                JOIN statuses ON errors.status_id = statuses.id
-                JOIN developers ON errors.developer_id = developers.id
-                JOIN users ON errors.user_id = users.id
-                WHERE errors.severity = ?
-                ORDER BY errors.id
-                """,
-                [severity],
-            ).fetchall()
-        finally:
-            conn.close()
+    if severity or query:
+        qs = Error.objects.select_related("status", "developer", "user")
+        if severity:
+            qs = qs.filter(severity=severity)
+        if query:
+            qs = qs.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
+        errors = qs.order_by("id")
 
     return render(
         request,
@@ -120,61 +92,36 @@ def error_search(request):
         {
             "errors": errors,
             "severity": severity,
+            "query": query,
         },
     )
 
 
 def statistics(request):
-    """Отобразить агрегированную статистику с GROUP BY и HAVING."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    try:
-        dev_stats = conn.execute(
-            """
-            SELECT
-                developers.name AS developer_name,
-                developers.specialization,
-                COUNT(errors.id) AS errors_count
-            FROM developers
-            LEFT JOIN errors ON developers.id = errors.developer_id
-            GROUP BY developers.id, developers.name, developers.specialization
-            ORDER BY errors_count DESC
-            """
-        ).fetchall()
-
-        status_stats = conn.execute(
-            """
-            SELECT
-                statuses.name AS status_name,
-                COUNT(errors.id) AS errors_count
-            FROM statuses
-            LEFT JOIN errors ON statuses.id = errors.status_id
-            GROUP BY statuses.id, statuses.name
-            ORDER BY statuses.id
-            """
-        ).fetchall()
-
-        busy_devs = conn.execute(
-            """
-            SELECT
-                developers.name AS developer_name,
-                COUNT(errors.id) AS errors_count
-            FROM developers
-            JOIN errors ON developers.id = errors.developer_id
-            GROUP BY developers.id, developers.name
-            HAVING COUNT(errors.id) > 1
-            ORDER BY errors_count DESC
-            """
-        ).fetchall()
-    finally:
-        conn.close()
+    """Аналитическая страница со статистикой через annotate() и Count()."""
+    status_stats = (
+        Status.objects
+        .annotate(errors_count=Count("errors"))
+        .order_by("id")
+    )
+    dev_stats = (
+        Developer.objects
+        .annotate(errors_count=Count("errors"))
+        .order_by("-errors_count")
+    )
+    busy_devs = (
+        Developer.objects
+        .annotate(errors_count=Count("errors"))
+        .filter(errors_count__gt=1)
+        .order_by("-errors_count")
+    )
 
     return render(
         request,
         "errors/statistics.html",
         {
-            "dev_stats": dev_stats,
             "status_stats": status_stats,
+            "dev_stats": dev_stats,
             "busy_devs": busy_devs,
         },
     )

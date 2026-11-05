@@ -69,4 +69,3 @@ def test_queries_file_exists_and_runs():
             assert res is not None
     finally:
         conn.close()
-

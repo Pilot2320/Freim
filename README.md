@@ -11,7 +11,8 @@ Freim — учебное веб-приложение для управления
 - **ПР1–ПР3**: Консольная версия приложения, ООП-модель и JSON-хранилище;
 - **ПР5**: Переход к Django: HTTP, URL-маршрутизация и первые view-функции;
 - **ПР6**: Шаблоны Django (DTL), наследование, включаемые компоненты и статические файлы (CSS, JS, логотип);
-- **ПР7**: Реляционная база данных SQLite, DDL-схема, импорт данных из JSON, разработка SQL-запросов и получение данных в Django-представлениях с использованием `sqlite3.Row` и параметризованных запросов.
+- **ПР7**: Реляционная база данных SQLite, DDL-схема, импорт данных из JSON, разработка SQL-запросов и получение данных в Django-представлениях с использованием `sqlite3.Row` и параметризованных запросов;
+- **ПР9**: Полноценный переход на Django ORM: создание моделей (`User`, `Developer`, `Status`, `Error`), выполнение миграций, перенос данных в `db.sqlite3`, замена сырых SQL-запросов на QuerySet API (`select_related`, фильтрация, сортировка, пагинация `Paginator`, агрегация `annotate(Count(...))`).
 
 ## 2. Используемые технологии
 
@@ -85,16 +86,38 @@ Freim — учебное веб-приложение для управления
 python -m db.import_json
 ```
 
-## 6. Веб-интерфейс и интеграция с SQLite
+## 6. Модели Django ORM и интеграция с веб-интерфейсом (ПР9)
 
-В Django-представлениях настроена фабрика строк `conn.row_factory = sqlite3.Row`, что позволяет обращаться к полям записей по их именам как в Python-коде (`row["title"]`), так и в шаблонах (`{{ error.title }}`). Все параметры пользовательского ввода передаются исключительно через параметризованные запросы (`?`), предотвращая уязвимости SQL-инъекций.
+В приложении `bugtracker` реализованы модели Django ORM (`bugtracker/models.py`), полностью отражающие реляционную структуру:
+- **`User`** (`verbose_name="Пользователь"`): поля `name`, `email`;
+- **`Developer`** (`verbose_name="Разработчик"`): поля `name`, `specialization`;
+- **`Status`** (`verbose_name="Статус"`): поле `name`;
+- **`Error`** (`verbose_name="Ошибка"`): поля `title`, `description`, `severity`, `priority`, а также внешние ключи `status`, `user`, `developer` с `on_delete=models.PROTECT` и `related_name="errors"`.
 
-Основные страницы веб-приложения:
-- **Главная (`/`)**: сводные метрики и последние ошибки, загружаемые агрегатными SQL-запросами из SQLite;
-- **Список ошибок (`/errors/`)**: полный список ошибок, собранный с помощью JOIN-запроса;
-- **Карточка ошибки (`/errors/<id>/`)**: детальная информация об ошибке из SQLite, корректная обработка отсутствующей записи с кодом ответа `404`;
-- **Поиск ошибок (`/errors/search/`)**: параметризованный SQL-поиск по уровню серьезности ошибки через GET-форму;
-- **Статистика (`/errors/statistics/`)**: агрегированные аналитические данные (распределение по статусам, нагрузка на разработчиков с `GROUP BY` и `HAVING`).
+Все модели содержат:
+- понятные русскоязычные `verbose_name` и `verbose_name_plural`;
+- информативные методы `__str__()`;
+- сортировку по умолчанию в классе `Meta` (`ordering`);
+- метод `get_absolute_url()` для сущности `Error`.
+
+### 6.1. Миграции и перенос данных
+- Начальная миграция схемы: `bugtracker/migrations/0001_initial.py`;
+- Скрипт миграции данных из `data/freim.sqlite` в `db.sqlite3`: `db/import_sqlite_to_orm.py`.
+
+Запуск миграций и импорта:
+```bash
+python manage.py migrate
+python -m db.import_sqlite_to_orm
+```
+
+### 6.2. QuerySet API в представлениях
+Все Django-представления переведены с прямого `sqlite3` на Django ORM:
+- **Оптимизация запросов (`select_related`)**: предотвращение проблемы N+1 запросов при выборке связанных сущностей (`status`, `developer`, `user`);
+- **Главная (`/`)**: сводные счетчики через ORM (`Error.objects.count()`, `Status.objects.count()`, `Developer.objects.count()`) и последние ошибки через `order_by('-id')[:5]`;
+- **Список ошибок (`/errors/`)**: фильтрация по статусу, разработчику, серьезности и приоритету; динамическая сортировка; постраничный вывод (`Paginator`) с сохранением GET-параметров в ссылках пагинации через `{% querystring %}`;
+- **Карточка ошибки (`/errors/<id>/`)**: безопасное получение объекта через `get_object_or_404(Error, pk=error_id)`;
+- **Поиск ошибок (`/errors/search/`)**: фильтрация с использованием `Q`-объектов;
+- **Статистика (`/errors/statistics/`)**: агрегация через `annotate(count=Count('errors'))` для статусов и разработчиков.
 
 ## 7. Структура проекта
 
@@ -103,7 +126,9 @@ Freim-main/
 ├── db/
 │   ├── __init__.py
 │   ├── database.py
-│   └── import_json.py
+│   ├── import_json.py
+│   ├── import_sqlite_to_orm.py
+│   └── inspect_source_db.py
 │
 ├── sql/
 │   ├── queries.sql
@@ -116,7 +141,11 @@ Freim-main/
 │   ├── users.json
 │   └── freim.sqlite
 │
+├── db.sqlite3
+│
 ├── bugtracker/
+│   ├── migrations/
+│   │   └── 0001_initial.py
 │   ├── templates/errors/
 │   │   ├── includes/
 │   │   │   ├── error_card.html
@@ -125,6 +154,9 @@ Freim-main/
 │   │   ├── error_list.html
 │   │   ├── error_search.html
 │   │   └── statistics.html
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
 │   ├── urls.py
 │   └── views.py
 │
@@ -135,6 +167,7 @@ Freim-main/
 │   │   └── js/main.js
 │   ├── templates/homepage/
 │   │   └── index.html
+│   ├── apps.py
 │   ├── urls.py
 │   └── views.py
 │
@@ -149,6 +182,7 @@ Freim-main/
 │   ├── test_database.py
 │   ├── test_errors.py
 │   ├── test_models.py
+│   ├── test_orm.py
 │   └── test_views.py
 │
 ├── freim_project/
@@ -181,4 +215,4 @@ python manage.py runserver
 
 ## 9. Дальнейшее развитие
 
-В следующих практических работах (ПР8–ПР10) запланирован переход от прямых SQL-запросов к Django ORM (моделям `models.Model`, миграциям `makemigrations` / `migrate`, Django Admin и формам Django).
+В практической работе ПР10 реализуется глубокая настройка административной панели Django (Django Admin), регистрация моделей с кастомными классами `ModelAdmin`, фильтрами, поиском, inline-формами и контекстными процессорами.

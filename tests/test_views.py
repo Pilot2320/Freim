@@ -42,7 +42,6 @@ def test_error_detail_not_found(client):
     url = reverse("bugtracker:error_detail", kwargs={"error_id": 9999})
     response = client.get(url)
     assert response.status_code == 404
-    assert "Ошибка не найдена" in response.content.decode("utf-8")
 
 
 def test_error_search_view(client):

@@ -1,46 +1,24 @@
-"""Представление главной страницы с выборкой показателей из SQLite."""
-
-import sqlite3
+"""Представление главной страницы с выборкой показателей через Django ORM."""
 
 from django.shortcuts import render
 
-from db.database import get_connection
+from bugtracker.models import Error
 
 
 def _load_error_context() -> dict:
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    try:
-        total = conn.execute("SELECT COUNT(*) FROM errors").fetchone()[0]
-        open_errors = conn.execute(
-            "SELECT COUNT(*) FROM errors WHERE status_id != 4"
-        ).fetchone()[0]
-        high_pri = conn.execute(
-            "SELECT COUNT(*) FROM errors WHERE priority = 'Высокий'"
-        ).fetchone()[0]
-        recent = conn.execute(
-            """
-            SELECT
-                errors.id,
-                errors.title,
-                errors.severity,
-                errors.priority,
-                statuses.name AS status,
-                statuses.name AS status_name
-            FROM errors
-            JOIN statuses ON errors.status_id = statuses.id
-            ORDER BY errors.id DESC
-            LIMIT 5
-            """
-        ).fetchall()
-        return {
-            "errors": recent,
-            "total_errors": total,
-            "open_errors": open_errors,
-            "high_priority": high_pri,
-        }
-    finally:
-        conn.close()
+    total = Error.objects.count()
+    open_errors = Error.objects.exclude(status__name="Закрыта").count()
+    high_priority = Error.objects.filter(priority="Высокий").count()
+    recent = (
+        Error.objects.select_related("status", "developer", "user")
+        .order_by("-id")[:5]
+    )
+    return {
+        "errors": recent,
+        "total_errors": total,
+        "open_errors": open_errors,
+        "high_priority": high_priority,
+    }
 
 
 def home(request):

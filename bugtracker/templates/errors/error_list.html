@@ -8,12 +8,69 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-0">Список ошибок</h1>
-    <p class="text-muted mb-0">Всего ошибок в базе данных: {{ errors|length }}</p>
+    <p class="text-muted mb-0">Всего ошибок в базе: {{ total_count }}</p>
   </div>
   <div>
-    <a class="btn btn-outline-primary btn-sm me-2" href="{% url 'bugtracker:search' %}">Поиск по серьезности</a>
+    <a class="btn btn-outline-primary btn-sm me-2" href="{% url 'bugtracker:search' %}">Поиск</a>
     <a class="btn btn-outline-info btn-sm me-2" href="{% url 'bugtracker:statistics' %}">Статистика</a>
     <a class="btn btn-primary btn-sm" href="{% url 'homepage:index' %}">На главную</a>
+  </div>
+</div>
+
+<!-- Форма фильтрации и сортировки (ПР9) -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label for="status" class="form-label small text-muted">Статус</label>
+        <select id="status" name="status" class="form-select form-select-sm">
+          <option value="">Все статусы</option>
+          {% for st in statuses %}
+            <option value="{{ st.pk }}" {% if selected_status == st.pk|stringformat:"s" %}selected{% endif %}>
+              {{ st.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label for="developer" class="form-label small text-muted">Разработчик</label>
+        <select id="developer" name="developer" class="form-select form-select-sm">
+          <option value="">Все разработчики</option>
+          {% for dev in developers %}
+            <option value="{{ dev.pk }}" {% if selected_dev == dev.pk|stringformat:"s" %}selected{% endif %}>
+              {{ dev.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label for="severity" class="form-label small text-muted">Серьезность</label>
+        <select id="severity" name="severity" class="form-select form-select-sm">
+          <option value="">Любая</option>
+          <option value="критическая" {% if selected_severity == "критическая" %}selected{% endif %}>критическая</option>
+          <option value="значительная" {% if selected_severity == "значительная" %}selected{% endif %}>значительная</option>
+          <option value="незначительная" {% if selected_severity == "незначительная" %}selected{% endif %}>незначительная</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label for="sort" class="form-label small text-muted">Сортировать по</label>
+        <select id="sort" name="sort" class="form-select form-select-sm">
+          <option value="id" {% if selected_sort == "id" %}selected{% endif %}>ID (возр.)</option>
+          <option value="-id" {% if selected_sort == "-id" %}selected{% endif %}>ID (убыв.)</option>
+          <option value="title" {% if selected_sort == "title" %}selected{% endif %}>Заголовку</option>
+          <option value="severity" {% if selected_sort == "severity" %}selected{% endif %}>Серьезности</option>
+          <option value="priority" {% if selected_sort == "priority" %}selected{% endif %}>Приоритету</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">Применить</button>
+        <a href="{% url 'bugtracker:error_list' %}" class="btn btn-outline-secondary btn-sm">Сбросить</a>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -24,4 +81,49 @@
     <div class="alert alert-info">Ошибки не найдены.</div>
   {% endfor %}
 </div>
+
+<!-- Постраничная навигация (Paginator) -->
+{% if page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Навигация по страницам" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">
+          Назад
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Назад</span>
+      </li>
+    {% endif %}
+
+    {% for page_number in page_obj.paginator.page_range %}
+      {% if page_number == page_obj.number %}
+        <li class="page-item active" aria-current="page">
+          <span class="page-link">{{ page_number }}</span>
+        </li>
+      {% else %}
+        <li class="page-item">
+          <a class="page-link" href="{% querystring page=page_number %}">
+            {{ page_number }}
+          </a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{% querystring page=page_obj.next_page_number %}">
+          Далее
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Далее</span>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}
