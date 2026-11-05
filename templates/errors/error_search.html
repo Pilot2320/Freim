@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Поиск ошибок — Freim
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <h1 class="h3 mb-3">Поиск ошибок по уровню серьезности</h1>
+    <form method="get" class="row g-3 align-items-center">
+      <div class="col-auto">
+        <label for="severity" class="col-form-label fw-bold">Уровень серьезности:</label>
+      </div>
+      <div class="col-auto">
+        <select name="severity" id="severity" class="form-select">
+          <option value="" {% if not severity %}selected{% endif %}>-- Выберите серьезность --</option>
+          <option value="критическая" {% if severity == "критическая" %}selected{% endif %}>критическая</option>
+          <option value="значительная" {% if severity == "значительная" %}selected{% endif %}>значительная</option>
+          <option value="незначительная" {% if severity == "незначительная" %}selected{% endif %}>незначительная</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Найти</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if severity %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 mb-0">Результаты поиска для: «{{ severity }}»</h2>
+    <span class="text-muted">Найдено: {{ errors|length }}</span>
+  </div>
+
+  <div class="error-list">
+    {% for error in errors %}
+      {% include "errors/includes/error_card.html" %}
+    {% empty %}
+      <div class="alert alert-warning">На выбранный уровень серьезности ошибок не найдено.</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<a href="{% url 'bugtracker:error_list' %}" class="btn btn-outline-secondary mt-3">
+  ← к общему списку ошибок
+</a>
+{% endblock %}
+

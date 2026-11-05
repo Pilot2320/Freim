@@ -1,0 +1,26 @@
+<article class="card error-card mb-3 shadow-sm border-0">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <h2 class="h5 card-title mb-2">
+        <a href="{% url 'bugtracker:error_detail' error.id %}">
+          {{ error.title|default:"Без названия" }}
+        </a>
+      </h2>
+      <span class="badge text-bg-{% if error.priority == 'Высокий' %}danger{% elif error.priority == 'Средний' %}warning{% else %}success{% endif %}">
+        {{ error.priority }}
+      </span>
+    </div>
+    <p class="card-text text-muted mb-2">
+      <strong>ID:</strong> {{ error.id }} | <strong>Серьезность:</strong> {{ error.severity }}
+    </p>
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div>
+        <strong>Статус:</strong> {% include "errors/includes/error_status.html" %}
+      </div>
+      <a href="{% url 'bugtracker:error_detail' error.id %}" class="btn btn-outline-primary btn-sm">
+        Подробнее
+      </a>
+    </div>
+  </div>
+</article>
+

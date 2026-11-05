@@ -1,0 +1,18 @@
+{% if error.status.name == "Закрыта" or error.status == "Закрыта" %}
+  <span class="badge bg-secondary error-status error-status-closed">
+    Закрыта
+  </span>
+{% elif error.status.name == "Исправлена" or error.status == "Исправлена" %}
+  <span class="badge bg-info text-dark error-status error-status-fixed">
+    Исправлена
+  </span>
+{% elif error.status.name == "В работе" or error.status == "В работе" %}
+  <span class="badge bg-primary error-status error-status-progress">
+    В работе
+  </span>
+{% else %}
+  <span class="badge bg-success error-status error-status-new">
+    {{ error.status|default:"Новая" }}
+  </span>
+{% endif %}
+

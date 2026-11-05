@@ -1,0 +1,21 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="{% url 'homepage:index' %}">
+      <img src="{% static 'homepage/img/logo.png' %}" alt="Freim" class="freim-nav-logo me-2" />
+      {{ site_name|default:"Freim" }}
+    </a>
+    <div class="navbar-nav ms-auto align-items-center">
+      <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
+      <a class="nav-link" href="{% url 'bugtracker:error_list' %}">
+        Ошибки
+        {% if total_errors_count %}
+        <span class="badge bg-danger rounded-pill">{{ total_errors_count }}</span>
+        {% endif %}
+      </a>
+      <a class="nav-link" href="{% url 'bugtracker:search' %}">Поиск</a>
+      <a class="nav-link" href="{% url 'bugtracker:statistics' %}">Статистика</a>
+      <a class="nav-link text-warning" href="/admin/" target="_blank">Админ-панель</a>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,35 @@
+body {
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.error-card {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.error-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.error-status {
+    font-weight: 600;
+}
+
+.freim-logo {
+    width: 120px;
+    height: auto;
+    margin: 1rem 0;
+}
+
+.freim-nav-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Главная — Freim
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Всего ошибок</h5>
+        <p class="display-6 fw-bold mb-0">{{ total_errors }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Активные</h5>
+        <p class="display-6 fw-bold mb-0">{{ open_errors }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title text-muted">Высокий приоритет</h5>
+        <p class="display-6 fw-bold mb-0">{{ high_priority }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <h1 class="display-6 mb-3">Сервис учета ошибок Freim</h1>
+    <p class="lead">
+      Система учета и отслеживания ошибок программного продукта. Ошибки связываются с пользователями, разработчиками и статусами.
+    </p>
+    <p>Основные разделы:</p>
+    <a href="{% url 'bugtracker:error_list' %}" class="btn btn-primary me-2">
+      Список ошибок
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white">
+    <h2 class="h5 mb-0">Последние ошибки</h2>
+  </div>
+  <div class="card-body">
+    {% for error in errors|slice:':5' %}
+      {% include "errors/includes/error_card.html" %}
+    {% empty %}
+      <p class="text-muted mb-0">Пока нет зарегистрированных ошибок.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
