@@ -126,3 +126,4 @@ class ErrorAdmin(admin.ModelAdmin):
 admin.site.site_header = "Панель управления Freim"
 admin.site.site_title = "Freim Bugtracker Admin"
 admin.site.index_title = "Управление дефектами и справочниками"
+
