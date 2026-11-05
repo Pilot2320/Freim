@@ -11,4 +11,3 @@ def bugtracker_context(request):
         "active_errors_count": Error.objects.active().count(),
         "critical_errors_count": Error.objects.critical().count(),
     }
-

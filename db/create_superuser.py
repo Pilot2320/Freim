@@ -23,4 +23,3 @@ def ensure_superuser(
 
 if __name__ == "__main__":
     ensure_superuser()
-
