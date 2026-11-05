@@ -7,8 +7,8 @@ from bugtracker.models import Error
 
 def _load_error_context() -> dict:
     total = Error.objects.count()
-    open_errors = Error.objects.exclude(status__name="Закрыта").count()
-    high_priority = Error.objects.filter(priority="Высокий").count()
+    open_errors = Error.objects.active().count()
+    high_priority = Error.objects.high_priority().count()
     recent = (
         Error.objects.select_related("status", "developer", "user")
         .order_by("-id")[:5]

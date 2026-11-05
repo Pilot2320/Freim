@@ -12,7 +12,8 @@ Freim — учебное веб-приложение для управления
 - **ПР5**: Переход к Django: HTTP, URL-маршрутизация и первые view-функции;
 - **ПР6**: Шаблоны Django (DTL), наследование, включаемые компоненты и статические файлы (CSS, JS, логотип);
 - **ПР7**: Реляционная база данных SQLite, DDL-схема, импорт данных из JSON, разработка SQL-запросов и получение данных в Django-представлениях с использованием `sqlite3.Row` и параметризованных запросов;
-- **ПР9**: Полноценный переход на Django ORM: создание моделей (`User`, `Developer`, `Status`, `Error`), выполнение миграций, перенос данных в `db.sqlite3`, замена сырых SQL-запросов на QuerySet API (`select_related`, фильтрация, сортировка, пагинация `Paginator`, агрегация `annotate(Count(...))`).
+- **ПР9**: Полноценный переход на Django ORM: создание моделей (`User`, `Developer`, `Status`, `Error`), выполнение миграций, перенос данных в `db.sqlite3`, замена сырых SQL-запросов на QuerySet API (`select_related`, фильтрация, сортировка, пагинация `Paginator`, агрегация `annotate(Count(...))`);
+- **ПР10**: Глубокая настройка административной панели Django (Django Admin), регистрация всех моделей с классами `ModelAdmin` (фильтрация, поиск, `list_editable`, `readonly_fields`, `autocomplete_fields`, inline-таблицы `TabularInline`, массовые действия `actions`), расширение ORM (`TextChoices`, менеджер `ErrorManager` и `ErrorQuerySet`, метод `close()`), создание суперпользователя и глобальный контекстный процессор `bugtracker_context`.
 
 ## 2. Используемые технологии
 
@@ -119,12 +120,79 @@ python -m db.import_sqlite_to_orm
 - **Поиск ошибок (`/errors/search/`)**: фильтрация с использованием `Q`-объектов;
 - **Статистика (`/errors/statistics/`)**: агрегация через `annotate(count=Count('errors'))` для статусов и разработчиков.
 
-## 7. Структура проекта
+## 7. Административная панель Django и расширенные возможности ORM (ПР10)
+
+В рамках ПР10 реализована полноценная настройка административного интерфейса (`bugtracker/admin.py`) и углубленная работа с Django ORM:
+
+### 7.1. Настройка Django Admin
+Все ключевые модели зарегистрированы с помощью декоратора `@admin.register`:
+- **`ErrorAdmin` (`Error`)**:
+  - `list_display`: идентификатор, заголовок, серьезность, приоритет, статус, назначенный разработчик, создавший пользователь;
+  - `list_display_links`: переход в карточку ошибки по клику на `id` или `title`;
+  - `search_fields`: полнотекстовый поиск по `title`, `description`, имени разработчика `developer__name` и пользователя `user__name`;
+  - `list_filter`: быстрая фильтрация по уровню серьезности, приоритету, статусу и разработчику;
+  - `list_editable`: прямое редактирование приоритета ошибки в списке объектов без перехода в детальную форму;
+  - `readonly_fields`: защита системного первичного ключа `id` от случайного изменения;
+  - `autocomplete_fields`: динамический поиск и подстановка связанных сущностей `developer`, `user`, `status`;
+  - `save_on_top`: дублирование кнопок сохранения в верхней части формы;
+  - **Массовые действия (`actions`)**:
+    - `mark_closed`: пакетный перевод выделенных ошибок в статус «Закрыта»;
+    - `make_high_priority`: пакетное повышение приоритета ошибок до «Высокий».
+- **`DeveloperAdmin` (`Developer`)**:
+  - Отображение ФИО, специализации и вычисляемого количества ошибок `errors_count` (с сортировкой по аннотации `Count('errors')`);
+  - Встроенная таблица назначенных ошибок `ErrorInline` (`admin.TabularInline`) прямо в карточке разработчика;
+  - Поиск по имени и специализации, фильтр по специализации.
+- **`UserAdmin` (`User`)**:
+  - Отображение имени, email и количества созданных ошибок;
+  - Встроенная таблица `ErrorInline` в карточке пользователя;
+  - Поиск по имени и адресу электронной почты.
+- **`StatusAdmin` (`Status`)**:
+  - Отображение наименования статуса и количества привязанных ошибок `errors_count`.
+- **Брендирование панели**:
+  - Заголовок `admin.site.site_header`: «Панель управления Freim»;
+  - Заголовок страницы `admin.site.site_title`: «Freim Bugtracker Admin»;
+  - Подзаголовок главной страницы `admin.site.index_title`: «Управление дефектами и справочниками».
+
+### 7.2. Суперпользователь и скрипт инициализации
+Для входа в административную панель подготовлен административный пользователь:
+- **Логин**: `admin`
+- **Пароль**: `admin`
+- **Email**: `admin@example.com`
+
+Скрипт проверки и автоматического создания администратора: `db/create_superuser.py`.
+```bash
+python -m db.create_superuser
+```
+
+### 7.3. Расширенные возможности моделей и ORM
+- **`models.TextChoices`**:
+  - `Severity`: `критическая`, `значительная`, `незначительная`;
+  - `Priority`: `Высокий`, `Средний`, `Низкий`.
+- **Подсказки `help_text`**: поясняющие подсказки для всех полей моделей в интерфейсе администратора;
+- **Кастомный QuerySet и Manager (`ErrorQuerySet`, `ErrorManager`)**:
+  - `Error.objects.active()` — исключает закрытые и исправленные ошибки;
+  - `Error.objects.critical()` — фильтрует критические ошибки;
+  - `Error.objects.high_priority()` — фильтрует задачи высокого приоритета;
+  - `Error.objects.by_status(status_name)` — фильтрация по имени статуса;
+- **Метод модели `error.close()`**: перевод ошибки в статус «Закрыта».
+
+### 7.4. Пользовательский контекстный процессор
+Создан модуль `bugtracker/context_processors.py`, зарегистрированный в `settings.py` (`TEMPLATES -> OPTIONS -> context_processors`).
+Функция `bugtracker_context(request)` передает во все шаблоны:
+- `site_name`: название сервиса (`Freim`);
+- `total_errors_count`: общее количество ошибок в системе;
+- `active_errors_count`: количество активных (не закрытых) ошибок;
+- `critical_errors_count`: количество критических ошибок.
+
+В навигационной панели (`templates/includes/navigation.html`) добавлен бейдж с количеством ошибок и быстрая ссылка на Django Admin (`/admin/`).
+
+## 8. Структура проекта
 
 ```text
 Freim-main/
 ├── db/
 │   ├── __init__.py
+│   ├── create_superuser.py
 │   ├── database.py
 │   ├── import_json.py
 │   ├── import_sqlite_to_orm.py
@@ -145,7 +213,8 @@ Freim-main/
 │
 ├── bugtracker/
 │   ├── migrations/
-│   │   └── 0001_initial.py
+│   │   ├── 0001_initial.py
+│   │   └── 0002_alter_developer_name_alter_developer_specialization_and_more.py
 │   ├── templates/errors/
 │   │   ├── includes/
 │   │   │   ├── error_card.html
@@ -156,6 +225,7 @@ Freim-main/
 │   │   └── statistics.html
 │   ├── admin.py
 │   ├── apps.py
+│   ├── context_processors.py
 │   ├── models.py
 │   ├── urls.py
 │   └── views.py
@@ -179,6 +249,7 @@ Freim-main/
 │
 ├── models/
 ├── tests/
+│   ├── test_admin.py
 │   ├── test_database.py
 │   ├── test_errors.py
 │   ├── test_models.py
@@ -190,7 +261,7 @@ Freim-main/
 └── README.md
 ```
 
-## 8. Проверка и тестирование
+## 9. Проверка и тестирование
 
 1. Системная проверка Django:
 ```bash
@@ -201,8 +272,9 @@ python manage.py check
 ```bash
 pytest -v
 ```
+(Проходят все 33 автоматизированных теста, охватывающие ООП-модели, SQL, представления, Django ORM, контекстные процессоры и Django Admin).
 
-3. Проверка качества кода:
+3. Проверка качества кода по стандарту PEP 8:
 ```bash
 flake8 . --extend-exclude=.venv
 ```
@@ -212,7 +284,4 @@ flake8 . --extend-exclude=.venv
 python manage.py runserver
 ```
 После запуска сайт доступен по адресу: http://127.0.0.1:8000/
-
-## 9. Дальнейшее развитие
-
-В практической работе ПР10 реализуется глубокая настройка административной панели Django (Django Admin), регистрация моделей с кастомными классами `ModelAdmin`, фильтрами, поиском, inline-формами и контекстными процессорами.
+Панель администратора доступна по адресу: http://127.0.0.1:8000/admin/ (учётные данные: `admin` / `admin`).
